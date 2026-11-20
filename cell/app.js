@@ -4,12 +4,19 @@ import { buildCell, PARTS } from './cell.js';
 
 const $ = (id) => document.getElementById(id);
 
-// عرض الصفحة = 1 وحدة. مركز رسم الخلية على الصفحة أعلى المنتصف بـ 0.151
-const PAGE_W = 1, PAGE_H = 1754 / 1240, PAGE_Y = 0.151, CELL_SCALE = 0.25;
+// عرض الصفحة = 1 وحدة. لكل صفحة هدف: موضع مركز الرسم (x,y عن منتصف الصفحة) وحجم الخلية
+// 0 = صفحة الكتاب (target.png) ، 1 = صفحة ملزمة أثر أكاديمي (target2.png)
+const PAGE_W = 1, PAGE_H = 1754 / 1240;
+const TARGETS = [
+  { x: 0, y: 0.151, s: 0.25, img: 'target.png' },
+  { x: -0.019, y: 0.273, s: 0.21, img: 'target2.png' },
+];
+let tIdx = 0; const ts = () => TARGETS[tIdx];
 
 let mode = null, renderer, scene, camera, anchorGroup, mindar;
-let found = false, locked = false, spinOn = true, showLabels = false, selected = null;
-let userScale = 1, appear = 1, hintShown = false, baseY = -Math.PI / 4, phase = 0, frame = 0, scaleMul = 1;
+let found = false, locked = false, detached = false, spinOn = true, flipOn = false, showLabels = false, selected = null, anchors3 = [];
+let userScale = 1, appear = 1, hintShown = false, frame = 0, scaleMul = 1;
+const vel = { x: 0, y: 0 }; // سرعة الدوران بعد رفع الإصبع (عطالة)
 const ws = new THREE.Vector3();
 
 // ----- بناء المشهد -----
@@ -31,11 +38,26 @@ spin.add(cell);
 }
 
 function poseOnPage() {
-  placement.position.set(0, PAGE_Y, CELL_SCALE * 1.06);
+  const t = ts();
+  placement.position.set(t.x, t.y, t.s * 1.06);
   placement.rotation.set(Math.PI / 2, 0, 0);
 }
 function resetView() {
-  userScale = 1; baseY = -Math.PI / 4; phase = 0; spin.rotation.set(0, baseY, 0); tilt.rotation.set(0.15, 0, 0);
+  userScale = 1; vel.x = vel.y = 0;
+  spin.quaternion.setFromEuler(new THREE.Euler(0, -Math.PI / 4, 0)); tilt.rotation.set(0.15, 0, 0);
+}
+
+// ----- دوران حر 360° بكل الاتجاهات (كواترنيون: بدون قفل محاور) -----
+const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _ax = new THREE.Vector3(), _ay = new THREE.Vector3();
+function rotateBy(dx, dy) { // dx: يمين/يسار ، dy: فوق/جوة (بالراديان) حول محاور الشاشة
+  if (!camera) return;
+  camera.updateMatrixWorld(); spin.parent.updateMatrixWorld();
+  spin.parent.getWorldQuaternion(_pq).invert();
+  _ay.setFromMatrixColumn(camera.matrixWorld, 1).applyQuaternion(_pq).normalize();
+  _ax.setFromMatrixColumn(camera.matrixWorld, 0).applyQuaternion(_pq).normalize();
+  if (dx) spin.quaternion.premultiply(_q.setFromAxisAngle(_ay, dx));
+  if (dy) spin.quaternion.premultiply(_q.setFromAxisAngle(_ax, dy));
+  spin.quaternion.normalize();
 }
 poseOnPage(); resetView();
 
@@ -53,7 +75,7 @@ for (const key of Object.keys(anchors)) {
   el.style.opacity = 0; $('labels').appendChild(el); labelEls[key] = el;
 }
 const v = new THREE.Vector3(), camPos = new THREE.Vector3(), b = new THREE.Vector3();
-function cellVisible() { return mode === 'preview' || locked || found; }
+function cellVisible() { return mode === 'preview' || locked || detached || found; }
 const occ = {}; const ray2 = new THREE.Raycaster();
 function occluded(key, wp) {
   ray2.set(camPos, b.copy(wp).sub(camPos).normalize());
@@ -119,7 +141,7 @@ const touch = $('touch');
 touch.addEventListener('pointerdown', (e) => {
   touch.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
+  if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), lt: performance.now(), moved: false }; vel.x = vel.y = 0; }
   if (ptrs.size === 2) { const [p, q] = [...ptrs.values()]; pinch = { d: Math.hypot(p.x - q.x, p.y - q.y), s: userScale }; if (drag) drag.moved = true; }
 });
 touch.addEventListener('pointermove', (e) => {
@@ -130,8 +152,12 @@ touch.addEventListener('pointermove', (e) => {
     userScale = THREE.MathUtils.clamp(pinch.s * Math.hypot(p.x - q.x, p.y - q.y) / pinch.d, 0.4, 3.5);
   } else if (drag) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
-    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) { drag.moved = true; setSpin(false); }
-    if (drag.moved) { baseY = spin.rotation.y + dx * 0.012; spin.rotation.y = baseY; phase = 0; tilt.rotation.x = THREE.MathUtils.clamp(tilt.rotation.x + dy * 0.008, -1.1, 1.1); }
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 8) { if (!drag.moved) { setSpin(false); setFlip(false); } drag.moved = true; }
+    if (drag.moved) {
+      const now = performance.now(), dt = Math.max(1, now - drag.lt); drag.lt = now;
+      rotateBy(dx * 0.011, dy * 0.011); // دوران كامل بدون حدود: يمين/يسار وفوق/جوة
+      vel.x = THREE.MathUtils.lerp(vel.x, dx * 0.011 / dt * 16.7, 0.5); vel.y = THREE.MathUtils.lerp(vel.y, dy * 0.011 / dt * 16.7, 0.5);
+    }
   }
 });
 const up = (e) => {
@@ -155,10 +181,13 @@ function tap(x, y) {
 }
 
 // ----- الأزرار -----
-function setSpin(on) { spinOn = on; $('bSpin').classList.toggle('on', on); }
+function setSpin(on) { spinOn = on; $('bSpin').classList.toggle('on', on); if (on) setFlip(false, true); }
+function setFlip(on, quiet) { flipOn = on; $('bFlip').classList.toggle('on', on); if (on && !quiet) setSpin(false); }
 $('bSpin').onclick = () => setSpin(!spinOn);
+$('bFlip').onclick = () => { const on = !flipOn; if (on) { spinOn = false; $('bSpin').classList.remove('on'); } setFlip(on, true); };
 $('bLabels').onclick = () => { showLabels = !showLabels; $('bLabels').classList.toggle('on', showLabels); };
-$('bReset').onclick = () => { if (locked) setLock(false); resetView(); select(null); };
+$('bReset').onclick = () => { if (detached) setDetach(false); if (locked) setLock(false); resetView(); select(null); };
+$('bDetach').onclick = () => setDetach(!detached);
 $('bBack').onclick = () => location.reload();
 $('bLock').onclick = () => setLock(!locked);
 function setLock(on) {
@@ -171,16 +200,39 @@ function setLock(on) {
   }
   $('bLock').classList.toggle('on', locked); refreshStatus();
 }
+// ----- فصل المجسم: يطلع من الورقة ويصير بنص الشاشة حتى تدوّره براحتك -----
+let dim = null;
+function setDetach(on) {
+  if (mode !== 'ar') return;
+  if (on) {
+    if (!found && !locked) { flashStatus('وجّه الكاميرا نحو الصفحة أولاً'); return; }
+    if (locked) { locked = false; $('bLock').classList.remove('on'); }
+    // وحدات MindAR كبيرة (بالبكسل)، فنحسب مقياس الصفحة الحالي ونضع المجسم أمام الكاميرا مباشرة
+    scene.updateMatrixWorld(true);
+    const unit = anchorGroup.getWorldScale(new THREE.Vector3()).x || 1;
+    scene.add(placement); placement.rotation.set(0, 0, 0); scaleMul = unit;
+    const r = ts().s * 1.25 * unit; const d = r / (0.42 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    placement.position.copy(camera.getWorldPosition(new THREE.Vector3())).addScaledVector(dir, d);
+    placement.quaternion.copy(camera.getWorldQuaternion(new THREE.Quaternion())); tilt.rotation.set(0.15, 0, 0);
+    detached = true; appear = 0.35; dim.style.opacity = 1;
+  } else {
+    anchorGroup.add(placement); poseOnPage(); scaleMul = 1; detached = false; dim.style.opacity = 0;
+  }
+  $('bDetach').classList.toggle('on', detached); $('bLock').style.display = detached ? 'none' : '';
+  refreshStatus();
+}
 
 // ----- الحالة -----
 let flashT = 0;
 function setStatus(text, ok) { $('stxt').textContent = text; $('status').classList.toggle('ok', !!ok); }
 function refreshStatus() {
   if (performance.now() < flashT) return;
-  if (locked) setStatus('📌 الخلية مثبتة — تستطيع إبعاد الكاميرا', true);
+  if (detached) setStatus('🧊 المجسم مفصول — دوّره 360° براحتك', true);
+  else if (locked) setStatus('📌 الخلية مثبتة — تستطيع إبعاد الكاميرا', true);
   else if (found) setStatus('تم التعرف على الصفحة ✓', true);
   else setStatus('وجّه الكاميرا نحو صفحة الخلية', false);
-  $('scan').style.display = mode === 'ar' && !found && !locked ? 'flex' : 'none';
+  $('scan').style.display = mode === 'ar' && !found && !locked && !detached ? 'flex' : 'none';
 }
 function flashStatus(t) { setStatus(t, false); flashT = performance.now() + 1800; setTimeout(refreshStatus, 1850); }
 function showHint() { if (hintShown) return; hintShown = true; $('hint').classList.add('show'); setTimeout(() => $('hint').classList.remove('show'), 5000); }
@@ -189,10 +241,14 @@ function showHint() { if (hintShown) return; hintShown = true; $('hint').classLi
 const clock = new THREE.Clock();
 function loop() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
-  if (spinOn && !drag) { phase += dt * 0.7; spin.rotation.y = baseY + Math.sin(phase) * 0.6; }
+  if (!drag) {
+    if (spinOn) rotateBy(dt * 0.6, 0);            // دوران أفقي مستمر 360°
+    else if (flipOn) rotateBy(0, dt * 0.6);       // دوران عمودي مستمر 360° (فوق وجوة)
+    else if (Math.abs(vel.x) + Math.abs(vel.y) > 0.0004) { rotateBy(vel.x, vel.y); vel.x *= 0.93; vel.y *= 0.93; } // عطالة بعد السحب
+  }
   appear = Math.min(1, appear + dt * 1.8);
   const k = appear < 1 ? 1 + 2.2 * Math.pow(appear - 1, 3) + 1.2 * Math.pow(appear - 1, 2) : 1; // easeOutBack
-  placement.scale.setScalar(CELL_SCALE * userScale * Math.max(0.001, k) * scaleMul);
+  placement.scale.setScalar(ts().s * userScale * Math.max(0.001, k) * scaleMul);
   if (selected) for (const m of mats[selected]) m.emissiveIntensity = 0.25 + 0.2 * Math.sin(t * 6);
   renderer.render(scene, camera);
   updateLabels();
@@ -222,23 +278,36 @@ async function startAR() {
   ({ renderer, scene, camera } = mindar);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   addLights(scene);
-  const anchor = mindar.addAnchor(0);
-  anchorGroup = anchor.group; anchorGroup.add(placement);
-  anchor.onTargetFound = () => { if (!found && !locked) appear = 0; found = true; refreshStatus(); showHint(); };
-  anchor.onTargetLost = () => { found = false; refreshStatus(); };
+  // هدفان: صفحة الكتاب وصفحة الملزمة — أيهما يظهر تخرج عليه الخلية
+  dim = document.createElement('div');
+  dim.style.cssText = 'position:absolute;inset:0;background:radial-gradient(90% 70% at 50% 45%,rgba(60,25,90,.55),rgba(15,7,25,.88));opacity:0;transition:opacity .35s;pointer-events:none;z-index:1';
+  const nAnch = TARGETS.length; let seen = 0;
+  for (let i = 0; i < nAnch; i++) {
+    const a = mindar.addAnchor(i); anchors3.push(a);
+    a.onTargetFound = () => {
+      seen |= 1 << i;
+      if (!locked && !detached && (i !== tIdx || placement.parent !== a.group)) { tIdx = i; anchorGroup = a.group; anchorGroup.add(placement); poseOnPage(); }
+      if (!found && !locked && !detached) appear = 0; found = true; refreshStatus(); showHint();
+    };
+    a.onTargetLost = () => { seen &= ~(1 << i); found = seen !== 0; refreshStatus(); };
+  }
+  anchorGroup = anchors3[0].group; anchorGroup.add(placement);
   try {
     await mindar.start();
   } catch (err) {
     console.error(err);
     return fail('تعذّر تشغيل الكاميرا 😕<br>اسمح للمتصفح باستخدام الكاميرا ثم أعد المحاولة.');
   }
+  renderer.domElement.style.zIndex = 2; renderer.domElement.style.position = 'absolute';
+  $('ar').insertBefore(dim, renderer.domElement);
   $('loading').style.display = 'none'; enterUI(); refreshStatus();
   clock.start(); renderer.setAnimationLoop(loop);
 }
 
 // ----- وضع المعاينة بدون كاميرا -----
 function startPreview() {
-  mode = 'preview'; $('preview').hidden = false; $('bLock').style.display = 'none';
+  mode = 'preview'; $('preview').hidden = false; $('bLock').style.display = 'none'; $('bDetach').style.display = 'none';
+  tIdx = new URLSearchParams(location.search).get('page') === 'mulzama' ? 1 : 0;
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   $('preview').appendChild(renderer.domElement);
@@ -246,14 +315,14 @@ function startPreview() {
   camera = new THREE.PerspectiveCamera(40, 1, 0.01, 50);
   // صفحة الكتاب مستلقية على "طاولة" افتراضية، والخلية فوقها كما في الكاميرا
   anchorGroup = new THREE.Group(); anchorGroup.rotation.x = -Math.PI / 2; scene.add(anchorGroup);
-  const tex = new THREE.TextureLoader().load('target.png'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const tex = new THREE.TextureLoader().load(ts().img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const page = new THREE.Mesh(new THREE.PlaneGeometry(PAGE_W, PAGE_H), new THREE.MeshBasicMaterial({ map: tex }));
   anchorGroup.add(page); anchorGroup.add(placement);
   const fit = () => {
     const w = innerWidth, h = innerHeight; renderer.setSize(w, h); camera.aspect = w / h;
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
     const d = Math.max(1.7, 0.62 / Math.tan(hf / 2));
-    const target = new THREE.Vector3(0, 0.22, -0.05);
+    const target = new THREE.Vector3(ts().x, ts().s * 0.88, -ts().y * 0.33);
     camera.position.copy(target).add(new THREE.Vector3(0, 0.62, 0.78).normalize().multiplyScalar(d));
     camera.lookAt(target); camera.updateProjectionMatrix();
   };

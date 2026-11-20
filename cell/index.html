@@ -58,8 +58,8 @@
   #info p{margin:6px 0 0;font-size:15px;line-height:1.75;font-weight:700;color:#4a3560}
   #info .x,#info .say{border:0;background:#f1e8f8;color:var(--p);width:34px;height:34px;border-radius:50%;font-size:16px;font-weight:800;cursor:pointer;flex:none}
   /* الأزرار السفلية */
-  #bar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:none;justify-content:center;gap:8px;padding:10px 10px calc(env(safe-area-inset-bottom) + 14px)}
-  #bar button{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;border:1.5px solid rgba(255,255,255,.18);border-radius:16px;min-width:64px;padding:7px 8px 6px;font-size:11.5px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:15;display:none;justify-content:center;gap:5px;padding:10px 8px calc(env(safe-area-inset-bottom) + 14px)}
+  #bar button{flex:1;max-width:78px;min-width:0!important;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;border:1.5px solid rgba(255,255,255,.18);border-radius:16px;min-width:64px;padding:7px 4px 6px;font-size:10.5px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
   #bar button span{font-size:19px;line-height:1.1}
   #bar button.on{background:var(--gold);color:var(--ink);border-color:var(--gold)}
   #hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:9;text-align:center;font-size:13px;font-weight:700;opacity:0;transition:opacity .4s;pointer-events:none;text-shadow:0 1px 6px rgba(0,0,0,.7)}
@@ -83,7 +83,7 @@
 <div id="scan"><div class="frame"><b></b><b></b><b></b><b></b><div class="line"></div></div></div>
 
 <div id="top"><div id="status"><span class="dot"></span><span id="stxt">وجّه الكاميرا نحو صفحة الخلية</span></div></div>
-<div id="hint">اسحب للتدوير • قرّب بإصبعين للتكبير • المس أي جزء</div>
+<div id="hint">اسحب بأي اتجاه للتدوير 360° • قرّب بإصبعين للتكبير • المس أي جزء</div>
 
 <div id="info">
   <div class="h"><span class="sw" id="isw"></span><h3 id="iname"></h3><button class="say" id="say" aria-label="استماع">🔊</button><button class="x" id="ix" aria-label="إغلاق">✕</button></div>
@@ -92,7 +92,9 @@
 
 <div id="bar">
   <button id="bLabels"><span>🏷️</span>الأسماء</button>
-  <button id="bSpin" class="on"><span>🔄</span>تدوير</button>
+  <button id="bSpin" class="on"><span>🔄</span>أفقي</button>
+  <button id="bFlip"><span>↕️</span>عمودي</button>
+  <button id="bDetach"><span>🧊</span>افصل المجسم</button>
   <button id="bLock"><span>📌</span>تثبيت</button>
   <button id="bReset"><span>↺</span>إعادة</button>
   <button id="bBack"><span>⟵</span>رجوع</button>
@@ -105,10 +107,11 @@
     <rect x="22" y="40" width="22" height="10" rx="5" fill="#ff9a4d" transform="rotate(-30 33 45)"/><rect x="80" y="76" width="22" height="10" rx="5" fill="#ff9a4d" transform="rotate(20 91 81)"/>
     <circle cx="88" cy="38" r="6" fill="#6cc04a"/><circle cx="36" cy="84" r="5" fill="#6cc04a"/><path d="M30 64 q8 -12 16 0" stroke="#e0a800" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
   <h1>الخلية الحيوانية<br>بالواقع المعزز</h1>
-  <p>وجّه كاميرا هاتفك نحو صفحة الخلية في الكتاب، وستخرج لك خلية ثلاثية الأبعاد تستطيع تدويرها وتكبيرها ولمس أجزائها.</p>
+  <p>وجّه كاميرا هاتفك نحو صفحة الخلية في الكتاب أو في ملزمة أثر أكاديمي، وستخرج لك خلية ثلاثية الأبعاد تدوّرها 360° بكل الاتجاهات وتكبّرها وتلمس أجزاءها.</p>
   <button class="btn main" id="goAR">📷 تشغيل الكاميرا</button>
   <button class="btn sec" id="go3D">🧊 معاينة ثلاثية الأبعاد بدون كاميرا</button>
-  <a href="target.png" target="_blank">📄 افتح صفحة الكتاب (للطباعة أو العرض على الحاسبة)</a>
+  <a href="target2.png" target="_blank">📄 افتح صفحة الملزمة (للطباعة أو العرض على الحاسبة)</a>
+  <a href="target.png" target="_blank" style="margin-top:6px">📄 صفحة الكتاب</a>
   <small>للتجربة: افتح صفحة الكتاب على شاشة الحاسبة أو اطبعها، ثم افتح هذا الرابط على الهاتف ووجّه الكاميرا نحوها.</small>
 </div>
 
