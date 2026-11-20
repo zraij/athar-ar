@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a1740">
+<title>الواقع المعزز | أثر أكاديمي</title>
+<link rel="stylesheet" href="fonts/cairo.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Cairo,system-ui,sans-serif;color:#fff;
+    background:radial-gradient(120% 70% at 50% 0%,#6b2fa0 0%,#2a1740 55%,#140a20 100%);
+    padding:calc(env(safe-area-inset-top) + 36px) 20px 40px;display:flex;flex-direction:column;align-items:center}
+  .logo{display:flex;gap:6px;align-items:center;font-weight:800;font-size:15px;opacity:.85}
+  .logo i{width:8px;height:8px;border-radius:50%;background:#f2c230;display:inline-block}
+  h1{font-size:30px;font-weight:800;margin:14px 0 6px;text-align:center}
+  p{margin:0 0 26px;opacity:.8;text-align:center;line-height:1.7;max-width:380px}
+  .list{width:100%;max-width:420px;display:grid;gap:12px}
+  a.card{display:flex;align-items:center;gap:14px;text-decoration:none;color:#2a1740;background:#fff;border-radius:20px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  a.card .ic{width:58px;height:58px;border-radius:16px;background:#fde7ef;display:flex;align-items:center;justify-content:center;flex:none}
+  a.card b{display:block;font-size:18px;font-weight:800}
+  a.card span{font-size:13.5px;font-weight:700;color:#6b5480}
+  .soon{opacity:.45;pointer-events:none}
+</style>
+</head>
+<body>
+  <div class="logo"><i></i>أثر أكاديمي<i></i></div>
+  <h1>صفحات الواقع المعزز</h1>
+  <p>اختر الدرس، ثم وجّه كاميرا هاتفك نحو صفحته في الكتاب.</p>
+  <div class="list">
+    <a class="card" href="cell/">
+      <div class="ic"><svg width="40" height="40" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="#f7c6d8" stroke="#c2185b" stroke-width="6"/><circle cx="62" cy="62" r="20" fill="#7b3fa0"/><circle cx="57" cy="57" r="7" fill="#2b0f40"/><rect x="22" y="40" width="22" height="10" rx="5" fill="#ff9a4d" transform="rotate(-30 33 45)"/><circle cx="88" cy="38" r="7" fill="#6cc04a"/></svg></div>
+      <div><b>الخلية الحيوانية</b><span>أحياء — السادس العلمي • الفصل الأول</span></div>
+    </a>
+    <a class="card soon" href="#">
+      <div class="ic" style="background:#eef3ff">⚛️</div>
+      <div><b>قريباً</b><span>دروس الكيمياء والفيزياء</span></div>
+    </a>
+  </div>
+</body>
+</html>
