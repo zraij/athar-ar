@@ -148,6 +148,7 @@ function seg(box, opts, on, cb) {
 
 /* ===== 1) مختبر المتسعة ===== */
 function simLab(root) {
+  const ar = document.createElement('a'); ar.className = 'arbtn'; ar.href = './'; ar.textContent = '📷 جرّبها بالواقع المعزز على صفحة الملزمة — زر «تحكم»'; root.after(ar);
   const cv = document.createElement('canvas'); cv.className = 'simcv'; root.appendChild(cv);
   const ctl = document.createElement('div'); ctl.className = 'ctl'; root.appendChild(ctl);
   const sA = slider(ctl, 'المساحة A', 20, 400, 5, 100, v => v + ' cm²');
