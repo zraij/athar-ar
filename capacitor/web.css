@@ -1,0 +1,96 @@
+/* النسخة التفاعلية من الملزمة — فوق أنماط الطباعة */
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{background:#eef2f6;font-size:16px;line-height:1.9;-webkit-text-size-adjust:100%}
+.pg,.pb{break-before:auto}
+#book{max-width:780px;margin:0 auto;padding:68px 14px 40px;background:#fff;min-height:100vh;box-shadow:0 0 40px rgba(23,50,77,.08)}
+#book section.pg{margin-top:14px}
+.mk,.anc{position:relative;top:-64px;display:block;height:0;visibility:hidden}
+/* الشريط العلوي */
+#bar{position:fixed;top:0;left:0;right:0;z-index:30;height:56px;display:flex;align-items:center;gap:10px;padding:0 12px;padding-top:env(safe-area-inset-top);background:#17324d;color:#fff;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+#bar button,#bar a{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;height:38px;min-width:42px;font-size:20px;font-family:Cairo;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#bar #arb{background:#e0a526;color:#17324d;font-size:14px;padding:0 10px}
+#bar .bt{flex:1;line-height:1.25;min-width:0}
+#bar .bt b{display:block;font-family:Cairo;font-size:16px}
+#bar .bt span{font-size:11.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#pg{font-family:Cairo;font-weight:800;font-size:13px;background:rgba(255,255,255,.14);border-radius:10px;padding:2px 9px;white-space:nowrap}
+#prog{position:fixed;top:56px;left:0;right:0;height:3px;z-index:30;background:transparent}
+#prog i{display:block;height:100%;width:0;background:#e0a526}
+#drawer{position:fixed;top:0;bottom:0;right:0;width:min(320px,86vw);z-index:40;background:#fff;transform:translateX(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);overflow:auto;box-shadow:-10px 0 30px rgba(0,0,0,.2);padding-bottom:30px}
+#drawer.on{transform:none}
+#drawer .dh{background:#17324d;color:#fff;font-family:Cairo;font-weight:800;font-size:18px;padding:16px}
+#toc a{display:block;padding:10px 16px;border-bottom:1px solid #eef2f6;color:#17324d;text-decoration:none;font-family:Cairo;font-weight:700;font-size:14.5px;line-height:1.5}
+#toc a b{display:inline-block;min-width:38px;color:#b8860b}
+#scrim{position:fixed;inset:0;z-index:35;background:rgba(10,20,30,.45);opacity:0;pointer-events:none;transition:opacity .25s}
+#scrim.on{opacity:1;pointer-events:auto}
+/* البطاقة الافتتاحية */
+.hero{background:linear-gradient(135deg,#0f2438,#24507a);color:#fff;border-radius:18px;padding:16px 18px;margin-bottom:10px}
+.hero h1{margin:4px 0;font-size:24px}
+.hero p{margin:0;font-size:14px;opacity:.9}
+.hb{display:inline-block;background:#e0a526;color:#17324d;border-radius:8px;padding:0 10px;font-family:Cairo;font-weight:800;font-size:13px}
+.modes{margin-top:10px;font-size:14px;font-weight:600}
+.modes input{width:18px;height:18px;vertical-align:middle}
+/* المحتوى */
+h2.les{font-size:19px}
+.two{grid-template-columns:1fr 1fr}
+@media(max-width:620px){.two{display:block}.ar-cards,.ar-steps{grid-template-columns:1fr}}
+.tb{display:block;overflow-x:auto;white-space:normal}
+.tb tbody{display:table;width:100%}
+.eq{font-size:15px;max-width:100%;overflow-x:auto}
+.sol,.ba{font-size:15px}
+/* الأشكال */
+figure.wf{margin:12px auto;text-align:center}
+.wfi{background:#fff;border-radius:14px;overflow:hidden}
+.wfi img{max-width:100%;height:auto;display:block;margin:0 auto;max-height:70vh}
+.b3d{margin:6px auto 2px;border:0;border-radius:12px;background:#17324d;color:#fff;font-family:Cairo;font-weight:800;font-size:14px;padding:7px 14px;cursor:pointer;box-shadow:0 4px 12px rgba(23,50,77,.25)}
+/* الكشف */
+.rvb{display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;border:1.5px solid #d9a21b;background:#fffaf0;color:#8a6a10;border-radius:10px;padding:3px 12px;font-family:Cairo;font-weight:800;font-size:13.5px;cursor:pointer}
+.rvb.open{background:#f2f7fd;border-color:#9cc0e6;color:#24507a}
+.hid{display:none!important}
+.flash{animation:fl 1.6s ease}
+@keyframes fl{0%,40%{background:#fff3c4}100%{background:transparent}}
+body.memo .df .dans,body.memo .wy .dans{filter:blur(6px);cursor:pointer;user-select:none}
+body.memo .df.shown .dans,body.memo .wy.shown .dans{filter:none}
+/* المحاكيات */
+.sim{border:2px solid #24507a;border-radius:18px;padding:12px 14px 14px;margin:16px 0;background:linear-gradient(180deg,#f4f8fc,#fff)}
+.sim h3{margin:0;font-size:18px;color:#17324d}
+.simd{font-size:14px;color:#53606d;margin:2px 0 8px}
+.ctl{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:14px;font-weight:600}
+.ctl input[type=range]{width:100%;accent-color:#24507a}
+.ctl output{font-family:Plex;font-weight:700;direction:ltr;min-width:70px;text-align:left;color:#17324d}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.seg button{flex:1;min-width:90px;border:1.5px solid #9cc0e6;background:#fff;color:#17324d;border-radius:12px;padding:6px 8px;font-family:Cairo;font-weight:800;font-size:13.5px;cursor:pointer}
+.seg button.on{background:#17324d;color:#fff;border-color:#17324d}
+.vals{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:10px}
+.vals div{background:#17324d;color:#fff;border-radius:12px;padding:6px 10px;font-size:12.5px;line-height:1.5}
+.vals b{display:block;font-family:Plex;font-size:16px;color:#f6e3a8;direction:ltr;text-align:right}
+.vals .chg{animation:pop .5s ease}
+@keyframes pop{0%{transform:scale(1.06);background:#24507a}100%{transform:none}}
+.simcv{width:100%;height:240px;border-radius:14px;background:radial-gradient(120% 90% at 50% 10%,#2f6a9e,#122a40);display:block;touch-action:none}
+canvas.plot{width:100%;height:190px;background:#fff;border:1px solid #dbe6f1;border-radius:12px;display:block}
+.cinp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cinp input{width:100%;border:1.5px solid #c9dbee;border-radius:10px;padding:6px;font-family:Plex;font-size:15px;text-align:center}
+.cinp label{font-size:12px;text-align:center;font-weight:700;color:#53606d}
+.note2{font-size:13px;color:#6b5a20;background:#fffaf0;border-radius:10px;padding:5px 10px;margin-top:8px}
+/* الاختبار */
+.qz{border:1.5px solid #dbe6f1;border-radius:14px;padding:10px 12px;margin:8px 0;background:#fff}
+.qz .qt{font-weight:700;margin-bottom:6px}
+.qz .op{display:block;width:100%;text-align:right;border:1.5px solid #c9dbee;background:#f7fafd;border-radius:11px;padding:7px 12px;margin:5px 0;font-family:Plex;font-size:15px;cursor:pointer;color:#1f2a36}
+.qz .op.ok{background:#e8f6ee;border-color:#2e8b57;color:#1b5e3a;font-weight:700}
+.qz .op.bad{background:#fdecea;border-color:#c0392b;color:#8e2a20}
+.qz .ex2{font-size:14px;background:#f2f7fd;border-radius:10px;padding:6px 10px;margin-top:6px}
+.score{font-family:Cairo;font-weight:800;font-size:16px;color:#17324d;text-align:center;margin-top:8px}
+/* المودال ثلاثي الأبعاد */
+#m3d{position:fixed;inset:0;z-index:60;background:radial-gradient(120% 80% at 50% 15%,#2f6a9e 0%,#122a40 60%,#0a1622 100%);color:#fff;touch-action:none}
+#m3d .mh{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 12px 8px}
+#m3d .mh b{flex:1;font-family:Cairo;font-size:15px;line-height:1.5}
+#m3d .mh button{border:0;background:rgba(255,255,255,.15);color:#fff;width:42px;height:42px;border-radius:50%;font-size:18px}
+#m3v{position:absolute;inset:0}
+#m3l{position:absolute;inset:0;pointer-events:none;z-index:2}
+#m3l .lbl{position:absolute;left:0;top:0;white-space:nowrap;font-family:Cairo;font-size:12px;font-weight:800;padding:2px 9px 3px;border-radius:9px;background:rgba(255,255,255,.95);color:#17324d;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#m3d .mb{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;justify-content:center;gap:8px;padding:10px 10px calc(env(safe-area-inset-bottom) + 14px)}
+#m3d .mb button{border:1.5px solid rgba(255,255,255,.2);background:rgba(12,28,44,.78);color:#fff;border-radius:14px;padding:8px 10px;font-family:Cairo;font-weight:800;font-size:13px}
+#m3d .mb button.on{background:#e0a526;color:#17324d;border-color:#e0a526}
+#m3hint{position:absolute;left:0;right:0;top:45%;text-align:center;font-weight:700;font-size:13px;opacity:.85;pointer-events:none;transition:opacity .6s}
+.arbtn{display:block;text-align:center;background:#e0a526;color:#17324d!important;font-family:Cairo;font-weight:900;font-size:17px;border-radius:14px;padding:10px;margin:4px 0 8px;text-decoration:none}
+.foot{text-align:center;color:#8a6a10;font-family:Cairo;font-weight:700;font-size:13px;margin-top:30px}
+.toc .arhow ol li:first-child b{color:#f6e3a8}
