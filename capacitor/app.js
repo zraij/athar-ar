@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { MindARThree } from '../lib/mindar-image-three.prod.js';
-import { buildCap, PARTS } from './capacitor.js';
+import { buildCap, PARTS, physics } from './capacitor.js';
 
 const $ = (id) => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
@@ -24,9 +24,23 @@ const ws = new THREE.Vector3(), qq = new THREE.Quaternion(), qp = new THREE.Quat
 const placement = new THREE.Group();
 const spin = new THREE.Group();
 placement.add(spin);
-const { cap, meshes, anchors, mats } = buildCap();
-spin.add(cap);
+// ----- حالة المختبر التفاعلي: نفس مبدأ الكتاب التفاعلي داخل الواقع المعزز -----
+const S = { A: 100, d: 4, k: 1, V: 12, connected: true, Q0: 0 };
+const REF = physics(S);
+let cap, meshes, anchors, mats;
+function modelParams() {
+  const ph = physics(S);
+  return { A: S.A, d: S.d, k: S.k, connected: S.connected, qn: Math.round(7 * ph.Q / REF.Q), en: Math.round(6 * ph.E / REF.E) };
+}
+function rebuild() {
+  if (cap) { spin.remove(cap); cap.traverse(o => o.geometry?.dispose?.()); }
+  ({ cap, meshes, anchors, mats } = buildCap(modelParams()));
+  spin.add(cap);
+  for (const k in occ) delete occ[k];
+  if (selected && !mats[selected]) select(null); else if (selected) select(selected, $('ctrl').classList.contains('show'));
+}
 const R_MODEL = 2.7;
+const occ = {};
 
 function poseOnPage(i = active) {
   const T = TARGETS[i];
@@ -37,7 +51,7 @@ function resetView() {
   userScale = 1; vel.x = vel.y = 0;
   spin.quaternion.setFromEuler(new THREE.Euler(0.28, -0.42, 0));
 }
-poseOnPage(); resetView();
+poseOnPage(); resetView(); rebuild();
 
 function addLights(sc) {
   sc.add(new THREE.HemisphereLight(0xffffff, 0x6a7890, 1.1));
@@ -47,20 +61,20 @@ function addLights(sc) {
 
 // ----- الأسماء -----
 const labelEls = {};
-for (const key of Object.keys(anchors)) {
+for (const key of Object.keys(PARTS)) {
   const el = document.createElement('div'); el.className = 'lbl';
   el.innerHTML = `<i style="background:${PARTS[key].color}"></i>${PARTS[key].name}`;
   el.style.opacity = 0; $('labels').appendChild(el); labelEls[key] = el;
 }
 const v = new THREE.Vector3(), camPos = new THREE.Vector3(), b = new THREE.Vector3();
 const visible = () => mode === 'preview' || detached || found;
-const occ = {}; const ray2 = new THREE.Raycaster();
+const ray2 = new THREE.Raycaster();
 function occluded(key, wp) {
   ray2.set(camPos, b.copy(wp).sub(camPos).normalize());
   const hit = ray2.intersectObjects(meshes, false)[0];
   return !!hit && hit.distance < camPos.distanceTo(wp) - cap.getWorldScale(ws).x * 0.08 && hit.object.userData.part !== key;
 }
-const ORDER = ['posPlate', 'negPlate', 'field', 'battery', 'gap', 'charges', 'wire'];
+const ORDER = ['posPlate', 'negPlate', 'dielectric', 'field', 'battery', 'gap', 'charges', 'wire'];
 function updateLabels() {
   frame++;
   const rect = renderer.domElement.getBoundingClientRect();
@@ -69,7 +83,7 @@ function updateLabels() {
   const placed = [];
   for (const key in labelEls) {
     const el = labelEls[key];
-    if (!(vis && (showLabels || key === selected))) { el.style.opacity = 0; continue; }
+    if (!anchors[key] || !(vis && (showLabels || key === selected))) { el.style.opacity = 0; continue; }
     anchors[key].getWorldPosition(v);
     if (frame % 4 === 0 || occ[key] === undefined) occ[key] = occluded(key, v);
     v.project(camera);
@@ -90,10 +104,11 @@ function updateLabels() {
 }
 
 // ----- الاختيار -----
-function select(key) {
+function select(key, quiet) {
   selected = key;
   for (const k in mats) for (const m of mats[k]) { m.emissive.set(k === key ? PARTS[k].color : '#000'); m.emissiveIntensity = 0; }
-  if (!key) { $('info').classList.remove('show'); return; }
+  if (key && !mats[key]) key = null;
+  if (!key || quiet) { $('info').classList.remove('show'); return; }
   const p = PARTS[key];
   $('isw').style.background = p.color; $('iname').textContent = p.name; $('idesc').textContent = p.desc;
   $('info').classList.add('show');
@@ -177,7 +192,6 @@ $('bSpinH').onclick = () => setSpin(spinMode === 'h' ? null : 'h');
 $('bSpinV').onclick = () => setSpin(spinMode === 'v' ? null : 'v');
 $('bLabels').onclick = () => { showLabels = !showLabels; $('bLabels').classList.toggle('on', showLabels); };
 $('bReset').onclick = () => { if (detached) setDetach(false); resetView(); select(null); };
-$('bBack').onclick = () => location.reload();
 $('bLock').onclick = () => setDetach(!detached);
 
 // فصل المجسم عن الصفحة: يوضع أمام الكاميرا ويحتفظ باتجاهه؛ وحدات MindAR كبيرة فنضرب بـ unit
@@ -236,7 +250,7 @@ function loop() {
   const k = appear < 1 ? 1 + 2.2 * Math.pow(appear - 1, 3) + 1.2 * Math.pow(appear - 1, 2) : 1;
   placement.scale.setScalar(TARGETS[active].s * userScale * Math.max(0.001, k) * scaleMul);
   if (found) lastUnit = anchorGroups[active].getWorldScale(ws).x;
-  if (selected) for (const m of mats[selected]) m.emissiveIntensity = 0.25 + 0.2 * Math.sin(t * 6);
+  if (selected && mats[selected]) for (const m of mats[selected]) m.emissiveIntensity = 0.25 + 0.2 * Math.sin(t * 6);
   renderer.render(scene, camera);
   updateLabels();
 }
@@ -298,7 +312,7 @@ function startPreview() {
     const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
     const d = Math.max(1.7, 0.62 / Math.tan(hf / 2));
     const target = new THREE.Vector3(T.x, 0.12, -T.y);
-    camera.position.copy(target).add(new THREE.Vector3(0, 0.62, 0.78).normalize().multiplyScalar(d));
+    camera.position.copy(target).add(new THREE.Vector3(0, 1.0, 0.42).normalize().multiplyScalar(d));
     camera.lookAt(target); camera.updateProjectionMatrix();
   };
   fit(); addEventListener('resize', fit);
@@ -313,6 +327,51 @@ function startPreview() {
   enterUI(); refreshStatus(); appear = 0; showHint();
   clock.start(); renderer.setAnimationLoop(loop);
 }
+
+
+// ----- لوحة التحكم: تغيير الأرقام والمسافة والعازل مباشرة على المجسم -----
+const MAT = [[1, 'هواء'], [2.1, 'تفلون'], [3.7, 'ورق'], [5.6, 'بايركس'], [80, 'ماء']];
+function fmt(x, u) {
+  const a = Math.abs(x); if (!a) return '0 ' + u;
+  if (u === 'F' || u === 'C') { if (a >= 1e-6) return +(x * 1e6).toPrecision(3) + ' μ' + u; if (a >= 1e-9) return +(x * 1e9).toPrecision(3) + ' n' + u; return +(x * 1e12).toPrecision(3) + ' p' + u; }
+  const e = Math.floor(Math.log10(a)); if (e >= -2 && e <= 4) return +x.toPrecision(3) + ' ' + u;
+  return (+(x / 10 ** e).toFixed(2)) + '×10' + String(e).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]) + ' ' + u;
+}
+const prevV = {};
+function showValues() {
+  const ph = physics(S);
+  const items = { C: ['السعة C', fmt(ph.C, 'F'), 'C = kε₀A/d'], Q: ['الشحنة Q', fmt(ph.Q, 'C'), 'Q = CΔV'], V: ['فرق الجهد ΔV', fmt(ph.dV, 'V'), S.connected ? 'ثابت = البطارية' : 'ΔV = Q/C'], E: ['المجال E', fmt(ph.E, 'V/m'), 'E = ΔV/d'], P: ['الطاقة PE', fmt(ph.PE, 'J'), '½CΔV²'] };
+  $('cvals').innerHTML = Object.entries(items).map(([k, [t, v, f]]) => `<div class="${prevV[k] && prevV[k] !== v ? 'chg' : ''}"><span>${t}</span><b>${v}</b><i>${f}</i></div>`).join('');
+  for (const k in items) prevV[k] = items[k][1];
+  $('cnote').textContent = S.connected ? '🔋 متصلة بالبطارية: فرق الجهد ثابت، فأي تغيير بالسعة يغيّر الشحنة.' : '✂️ مفصولة: الشحنة ثابتة، فأي تغيير بالسعة يغيّر فرق الجهد.';
+  $('sV').disabled = !S.connected;
+}
+let pending = false;
+function changed() { showValues(); if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; rebuild(); }); }
+function bindSlider(id, key, unit) {
+  const r = $(id), o = $(id + 'o'); const upd = () => { S[key] = +r.value; o.textContent = r.value + ' ' + unit; };
+  r.value = S[key]; upd(); r.addEventListener('input', () => { upd(); changed(); });
+}
+bindSlider('sD', 'd', 'mm'); bindSlider('sA', 'A', 'cm²'); bindSlider('sV', 'V', 'V');
+$('cmat').innerHTML = MAT.map(([k, t]) => `<button data-k="${k}" class="${k === S.k ? 'on' : ''}">${t}<small>k=${k}</small></button>`).join('');
+$('cmat').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; S.k = +b.dataset.k; [...$('cmat').children].forEach(x => x.classList.toggle('on', x === b)); changed(); if (S.k > 1) select('dielectric', true); };
+function setConn(on) {
+  if (!on && S.connected) S.Q0 = physics(S).Q;
+  S.connected = on; $('cBat').classList.toggle('on', on); $('cBat').innerHTML = on ? '🔋 متصلة بالبطارية' : '✂️ مفصولة عن البطارية'; changed();
+}
+$('cBat').onclick = () => setConn(!S.connected);
+function setAll(v) { Object.assign(S, v); ['sD', 'sA', 'sV'].forEach(id => { const k = { sD: 'd', sA: 'A', sV: 'V' }[id]; $(id).value = S[k]; $(id + 'o').textContent = S[k] + ' ' + { d: 'mm', A: 'cm²', V: 'V' }[k]; }); [...$('cmat').children].forEach(x => x.classList.toggle('on', +x.dataset.k === S.k)); $('cBat').classList.toggle('on', S.connected); $('cBat').innerHTML = S.connected ? '🔋 متصلة بالبطارية' : '✂️ مفصولة عن البطارية'; changed(); }
+$('pEx2').onclick = () => setAll({ A: 100, d: 5, k: 1, V: 10, connected: true });
+$('pFaraday').onclick = () => {
+  setAll({ A: 100, d: 4, k: 1, V: 12, connected: true });
+  setTimeout(() => setConn(false), 900);
+  setTimeout(() => { S.k = 5.6; setAll({}); select('dielectric', true); flashStatus('لاحظ: الشحنة ثابتة وفرق الجهد نزل 5.6 مرة'); }, 2000);
+};
+$('pReset').onclick = () => setAll({ A: 100, d: 4, k: 1, V: 12, connected: true });
+const barH = () => document.documentElement.style.setProperty('--barh', ($('bar').offsetHeight + 6) + 'px');
+addEventListener('resize', barH);
+$('bCtrl').onclick = () => { barH(); const on = $('ctrl').classList.toggle('show'); $('bCtrl').classList.toggle('on', on); if (on) { select(null); $('hint').classList.remove('show'); } };
+showValues();
 
 $('goAR').onclick = startAR;
 $('go3D').onclick = startPreview;
